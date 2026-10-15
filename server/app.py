@@ -166,6 +166,7 @@ def garmin_activities():
         return jsonify(error='Could not load activities: ' + str(e)[:100]), 502
     if cutoff:
         acts = [a for a in acts if (a.get('startTimeLocal') or '')[:10] >= cutoff]
+    acts.sort(key=lambda a: a.get('startTimeLocal') or '', reverse=True)
     slim = [{
         'id': a.get('activityId'),
         'name': a.get('activityName') or 'Activity',
@@ -435,6 +436,7 @@ def wahoo_workouts():
         if not items or (cutoff and (items[-1].get('starts') or '')[:10] < cutoff) or page >= data.get('total_pages', 1):
             break
         page += 1
+    out.sort(key=lambda a: a['start'] or '', reverse=True)
     return jsonify(activities=out)
 
 
@@ -599,6 +601,7 @@ def strava_activities():
         if len(items) < 100:
             break
         page += 1
+    out.sort(key=lambda a: a['start'] or '', reverse=True)
     return jsonify(activities=out)
 
 
