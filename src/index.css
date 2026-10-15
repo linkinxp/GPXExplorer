@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+
+  @keyframes shimmer-slide {
+    to {
+      transform: translate(calc(100cqw - 100%));
+    }
+  }
+
+  @keyframes spin-around {
+    0% {
+      transform: translateZ(0) rotate(0);
+    }
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
+    }
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
+    }
+    100% {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@utility anim-fade-up {
+  animation: fade-up 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@utility anim-fade-in {
+  animation: fade-in 0.9s ease-out both;
+}
+
+@utility anim-draw {
+  stroke-dasharray: 1;
+  animation: draw-line 1.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@utility anim-toast {
+  animation: toast-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 10% -10%, rgb(16 185 129 / 0.08), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgb(56 189 248 / 0.07), transparent 60%),
+      #09090b;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: url('/topo-bg.svg') center / cover no-repeat;
+    opacity: 0.6;
+  }
+  @keyframes dial-pulse {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+  }
+  @keyframes dial-ring {
+    0%, 100% { stroke-opacity: 0.25; }
+    50% { stroke-opacity: 0.8; }
+  }
+  .dial-arrow {
+    animation: dial-pulse 2.6s ease-in-out infinite;
+  }
+  .dial-ring {
+    animation: dial-ring 2.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dial-arrow,
+    .dial-ring {
+      animation: none;
+    }
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .street-map.leaflet-container {
+    background: #09090b;
+    font-family: inherit;
+  }
+  .street-map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.75) saturate(0.2);
+  }
+  .street-map .leaflet-bar a {
+    background: #18181b;
+    color: #e4e4e7;
+    border-color: #27272a;
+  }
+  .street-map .leaflet-bar a:hover {
+    background: #27272a;
+  }
+  .street-map .leaflet-control-attribution {
+    background: rgb(9 9 11 / 0.7) !important;
+    color: #71717a !important;
+  }
+  .street-map .leaflet-control-attribution a {
+    color: #a1a1aa !important;
+  }
+  .street-badge {
+    display: flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 2px solid #09090b;
+    color: #09090b;
+    font-size: 9px;
+    font-weight: 700;
+  }
+}
