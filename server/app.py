@@ -472,3 +472,192 @@ def wahoo_logout():
     resp = make_response(jsonify(status='ok'))
     resp.delete_cookie(WAHOO_COOKIE, path='/api')
     return resp
+
+
+STRAVA_ID = os.environ.get('STRAVA_CLIENT_ID', '')
+STRAVA_SECRET = os.environ.get('STRAVA_CLIENT_SECRET', '')
+STRAVA_REDIRECT = os.environ.get('STRAVA_REDIRECT_URI', 'https://gpx.linkinxp.com/api/strava/callback')
+STRAVA_HOST = 'https://www.strava.com'
+STRAVA_DIR = '/var/lib/gpx-api/strava'
+STRAVA_COOKIE = 'stravasid'
+STRAVA_CYCLING = {'Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide', 'Handcycle', 'Velomobile'}
+STRAVA_STATES = {}
+
+
+def strava_save(sid, tok):
+    os.makedirs(STRAVA_DIR, mode=0o700, exist_ok=True)
+    rec = {
+        'access': tok['access_token'],
+        'refresh': tok['refresh_token'],
+        'expires_at': tok.get('expires_at', time.time() + 21600),
+    }
+    with open(os.path.join(STRAVA_DIR, sid + '.json'), 'w') as f:
+        json.dump(rec, f)
+    return rec
+
+
+def strava_token_request(data):
+    data.update(client_id=STRAVA_ID, client_secret=STRAVA_SECRET)
+    return requests.post(STRAVA_HOST + '/oauth/token', data=data, timeout=20)
+
+
+def strava_access(sid):
+    if not SID_RE.match(sid):
+        return None
+    p = os.path.join(STRAVA_DIR, sid + '.json')
+    if not os.path.isfile(p):
+        return None
+    with open(p) as f:
+        rec = json.load(f)
+    if time.time() > rec['expires_at'] - 60:
+        r = strava_token_request({'grant_type': 'refresh_token', 'refresh_token': rec['refresh']})
+        if r.status_code != 200:
+            os.remove(p)
+            return None
+        rec = strava_save(sid, r.json())
+    return rec['access']
+
+
+def strava_get(tok, path, **params):
+    return requests.get(STRAVA_HOST + '/api/v3' + path, headers={'Authorization': 'Bearer ' + tok}, params=params, timeout=30)
+
+
+@app.get('/api/strava/status')
+def strava_status():
+    return jsonify(configured=bool(STRAVA_ID), logged_in=bool(strava_access(request.cookies.get(STRAVA_COOKIE, ''))))
+
+
+@app.get('/api/strava/login')
+def strava_login():
+    if not STRAVA_ID:
+        return jsonify(error='Strava is not configured on this server.'), 503
+    sid = request.cookies.get(STRAVA_COOKIE, '')
+    if not SID_RE.match(sid):
+        sid = secrets.token_urlsafe(24)
+    now = time.time()
+    for k in [k for k, v in STRAVA_STATES.items() if v[1] < now]:
+        del STRAVA_STATES[k]
+    state = secrets.token_urlsafe(16)
+    STRAVA_STATES[state] = (sid, now + 600)
+    q = urllib.parse.urlencode({
+        'client_id': STRAVA_ID,
+        'redirect_uri': STRAVA_REDIRECT,
+        'response_type': 'code',
+        'approval_prompt': 'auto',
+        'scope': 'read,activity:read',
+        'state': state,
+    })
+    resp = make_response(redirect(f'{STRAVA_HOST}/oauth/authorize?{q}'))
+    secure = request.headers.get('X-Forwarded-Proto', '') == 'https'
+    resp.set_cookie(STRAVA_COOKIE, sid, max_age=SESSION_TTL, httponly=True, secure=secure, samesite='Lax', path='/api')
+    return resp
+
+
+@app.get('/api/strava/callback')
+def strava_callback():
+    entry = STRAVA_STATES.pop(request.args.get('state', ''), None)
+    if not entry or entry[1] < time.time() or 'code' not in request.args:
+        return redirect('/?strava=failed')
+    r = strava_token_request({'grant_type': 'authorization_code', 'code': request.args['code']})
+    if r.status_code != 200:
+        return redirect('/?strava=failed')
+    strava_save(entry[0], r.json())
+    return redirect('/?strava=connected')
+
+
+@app.get('/api/strava/activities')
+def strava_activities():
+    tok = strava_access(request.cookies.get(STRAVA_COOKIE, ''))
+    if not tok:
+        return jsonify(error='Not connected to Strava.'), 401
+    rng = request.args.get('range', '30')
+    after = None if rng == 'all' else int(time.time() - int(rng) * 86400)
+    out, page = [], 1
+    while page <= 5:
+        params = {'per_page': 100, 'page': page}
+        if after:
+            params['after'] = after
+        r = strava_get(tok, '/athlete/activities', **params)
+        if r.status_code != 200:
+            return jsonify(error='Could not load Strava activities.'), 502
+        items = r.json()
+        for a in items:
+            if a.get('sport_type') not in STRAVA_CYCLING:
+                continue
+            out.append({
+                'id': a.get('id'),
+                'name': a.get('name') or 'Ride',
+                'type': 'cycling',
+                'start': a.get('start_date'),
+                'distance': a.get('distance') or 0,
+                'duration': a.get('moving_time') or a.get('elapsed_time') or 0,
+                'elevationGain': a.get('total_elevation_gain'),
+                'avgSpeed': a.get('average_speed'),
+                'avgHr': a.get('average_heartrate'),
+                'gps': bool(a.get('start_latlng')),
+            })
+        if len(items) < 100:
+            break
+        page += 1
+    return jsonify(activities=out)
+
+
+@app.get('/api/strava/activities/<int:aid>/gpx')
+def strava_gpx(aid):
+    tok = strava_access(request.cookies.get(STRAVA_COOKIE, ''))
+    if not tok:
+        return jsonify(error='Not connected to Strava.'), 401
+    ar = strava_get(tok, f'/activities/{aid}')
+    if ar.status_code != 200:
+        return jsonify(error='Could not load this activity.'), 502
+    act = ar.json()
+    sr = strava_get(tok, f'/activities/{aid}/streams', keys='time,latlng,altitude,heartrate,cadence,watts,temp', key_by_type='true')
+    if sr.status_code != 200:
+        return jsonify(error="Could not load this activity's data."), 502
+    streams = sr.json()
+    latlng = (streams.get('latlng') or {}).get('data') or []
+    if not latlng:
+        return jsonify(error='This activity has no GPS track.'), 422
+    n = len(latlng)
+
+    def series(key):
+        data = (streams.get(key) or {}).get('data') or []
+        return data if len(data) == n else [None] * n
+
+    times, alts, hrs, cads, pwrs, temps = (series(k) for k in ('time', 'altitude', 'heartrate', 'cadence', 'watts', 'temp'))
+    start = datetime.strptime(act['start_date'], '%Y-%m-%dT%H:%M:%SZ')
+    parts = []
+    for i, (lat, lon) in enumerate(latlng):
+        ext = ''.join(
+            f'<{tag}>{int(v)}</{tag}>'
+            for tag, v in (('hr', hrs[i]), ('cad', cads[i]), ('atemp', temps[i]), ('power', pwrs[i]))
+            if v is not None
+        )
+        parts.append(
+            f'<trkpt lat="{lat:.7f}" lon="{lon:.7f}">'
+            + (f'<ele>{alts[i]:.1f}</ele>' if alts[i] is not None else '')
+            + (f'<time>{(start + timedelta(seconds=times[i])).strftime("%Y-%m-%dT%H:%M:%SZ")}</time>' if times[i] is not None else '')
+            + (f'<extensions>{ext}</extensions>' if ext else '')
+            + '</trkpt>'
+        )
+    text = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<gpx version="1.1" creator="gpx.linkinxp.com" xmlns="http://www.topografix.com/GPX/1/1"><trk>'
+        + f'<name>{escape(act.get("name") or "Ride")}</name><trkseg>'
+        + ''.join(parts)
+        + '</trkseg></trk></gpx>'
+    )
+    return Response(text, mimetype='application/gpx+xml')
+
+
+@app.post('/api/strava/logout')
+def strava_logout():
+    sid = request.cookies.get(STRAVA_COOKIE, '')
+    if SID_RE.match(sid):
+        try:
+            os.remove(os.path.join(STRAVA_DIR, sid + '.json'))
+        except FileNotFoundError:
+            pass
+    resp = make_response(jsonify(status='ok'))
+    resp.delete_cookie(STRAVA_COOKIE, path='/api')
+    return resp
