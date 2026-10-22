@@ -56,7 +56,7 @@ function DaylightBar({ points }: { points: WeatherPoint[] }) {
       </div>
       <div className="relative mt-3 h-8 text-[10px] text-zinc-400">
         {events.map((e) => (
-          <span key={`${e.label}-${e.t.getTime()}`} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${e.pct}%` }}>
+          <span key={`${e.label}-${e.t.getTime()}`} className="absolute whitespace-nowrap" style={{ left: `${e.pct}%`, transform: `translateX(${e.pct < 15 ? 0 : e.pct > 85 ? -100 : -50}%)` }}>
             {e.label} {fmtTime(e.t)}
           </span>
         ))}
