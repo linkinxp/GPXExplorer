@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { Analysis } from '../types'
 import { fetchRouteWeather, WMO, type WeatherResult, type WeatherPoint } from '../lib/weather'
-import { fmtKm, fmtNum, fmtTime, kmhFromSpeed, speedUnit, speedValue, toLocalInputValue } from '../lib/format'
+import { fmtKm, fmtNum, fmtTimeIn, kmhFromSpeed, tzLabel, speedUnit, speedValue, toLocalInputValue } from '../lib/format'
 import { RideConditions } from './RideConditions'
 import { ShimmerButton } from './magic/shimmer-button'
 import { BorderBeam } from './magic/border-beam'
@@ -117,7 +117,7 @@ function WeatherGrid({ data }: { data: WeatherResult }) {
         </span>
         {lateSunset && finish.sunset && (
           <span className="rounded-full bg-amber-500/15 px-3 py-1 text-amber-300 ring-1 ring-amber-400/30">
-            Finish is after sunset ({fmtTime(finish.sunset)})
+            Finish is after sunset ({fmtTimeIn(finish.sunset, finish.tz)} {tzLabel(finish.sunset, finish.tz)})
           </span>
         )}
       </div>
@@ -159,7 +159,7 @@ function WeatherCard({ p }: { p: WeatherPoint }) {
         <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{p.label}</p>
         <p className="tabular text-xs text-zinc-500">{fmtKm(p.distanceM, 1)}</p>
       </div>
-      <p className="tabular mt-1 text-xs text-zinc-400">{fmtTime(p.time)}</p>
+      <p className="tabular mt-1 text-xs text-zinc-400">{fmtTimeIn(p.time, p.tz)}</p>
 
       <div className="mt-4 flex items-end gap-3">
         <span className="tabular text-4xl font-semibold tracking-tight text-zinc-50">
@@ -184,8 +184,8 @@ function WeatherCard({ p }: { p: WeatherPoint }) {
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <Row label="Rain" value={p.precipMm === null ? '—' : `${p.precipMm.toFixed(1)} mm`} />
         <Row label="Cloud" value={fmtNum(p.cloudPct, 0, '%')} />
-        <Row label="Sunrise" value={fmtTime(p.sunrise)} />
-        <Row label="Sunset" value={fmtTime(p.sunset)} />
+        <Row label="Sunrise" value={fmtTimeIn(p.sunrise, p.tz)} />
+        <Row label="Sunset" value={fmtTimeIn(p.sunset, p.tz)} />
       </dl>
     </div>
   )

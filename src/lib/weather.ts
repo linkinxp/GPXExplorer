@@ -19,6 +19,8 @@ export interface WeatherPoint {
   code: number | null
   sunrise: Date | null
   sunset: Date | null
+  /** IANA time zone of the point, e.g. America/Toronto */
+  tz: string
 }
 
 export interface WeatherResult {
@@ -82,10 +84,13 @@ interface OmResponse {
   reason?: string
   hourly: OmHourly
   daily?: { time: string[]; sunrise?: string[]; sunset?: string[] }
+  timezone?: string
+  utc_offset_seconds?: number
 }
 
-const utcIso = (t: string) => new Date(`${t}Z`)
-const dayKey = (d: Date) => d.toISOString().slice(0, 10)
+// Open-Meteo returns times as local wall-clock strings for the point's time zone; offsetS converts them to instants.
+const localIso = (t: string, offsetS: number) => new Date(Date.parse(`${t}Z`) - offsetS * 1000)
+const dayKey = (d: Date, offsetS = 0) => new Date(d.getTime() + offsetS * 1000).toISOString().slice(0, 10)
 
 function nearestProfileIndex(profile: ProfilePoint[], d: number): number {
   let lo = 0
@@ -104,11 +109,11 @@ function routeBearing(profile: ProfilePoint[], idx: number): number {
   return bearing(a.lat, a.lon, b.lat, b.lon)
 }
 
-function nearestHour(times: string[], target: Date): number {
+function nearestHour(times: string[], target: Date, offsetS: number): number {
   let best = 0
   let bestDiff = Infinity
   for (let i = 0; i < times.length; i++) {
-    const diff = Math.abs(utcIso(times[i]).getTime() - target.getTime())
+    const diff = Math.abs(localIso(times[i], offsetS).getTime() - target.getTime())
     if (diff < bestDiff) {
       bestDiff = diff
       best = i
@@ -161,9 +166,10 @@ export async function fetchRouteWeather(
     longitude: samples.map((s) => s.lon.toFixed(4)).join(','),
     hourly: HOURLY,
     daily: 'sunrise,sunset',
-    timezone: 'GMT',
-    start_date: dayKey(startTime),
-    end_date: dayKey(finish),
+    timezone: 'auto',
+    // pad by a day each side: the date range is in each point's local time zone
+    start_date: dayKey(new Date(startTime.getTime() - DAY_MS)),
+    end_date: dayKey(new Date(Math.min(finish.getTime() + DAY_MS, now + (useArchive ? -2 : 15) * DAY_MS))),
   })
 
   const res = await fetch(`${base}?${params}`, { signal })
@@ -175,8 +181,9 @@ export async function fetchRouteWeather(
   const points: WeatherPoint[] = samples.map((s, i) => {
     const r = results[i]
     const h = r.hourly
-    const at = (key: string) => (h[key] as (number | null)[])[nearestHour(h.time, s.time)] ?? null
-    const day = dayKey(s.time)
+    const off = r.utc_offset_seconds ?? 0
+    const at = (key: string) => (h[key] as (number | null)[])[nearestHour(h.time, s.time, off)] ?? null
+    const day = dayKey(s.time, off)
     const dIdx = r.daily?.time.indexOf(day) ?? -1
     const sunriseRaw = dIdx >= 0 ? r.daily?.sunrise?.[dIdx] : undefined
     const sunsetRaw = dIdx >= 0 ? r.daily?.sunset?.[dIdx] : undefined
@@ -202,8 +209,9 @@ export async function fetchRouteWeather(
       windFromDeg,
       headwindKmh: headwind,
       code: at('weather_code'),
-      sunrise: sunriseRaw ? utcIso(sunriseRaw) : null,
-      sunset: sunsetRaw ? utcIso(sunsetRaw) : null,
+      sunrise: sunriseRaw ? localIso(sunriseRaw, off) : null,
+      sunset: sunsetRaw ? localIso(sunsetRaw, off) : null,
+      tz: r.timezone ?? 'UTC',
     }
   })
 

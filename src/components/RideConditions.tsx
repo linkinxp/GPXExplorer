@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { WeatherPoint } from '../lib/weather'
-import { fmtTime, speedUnit, speedValue } from '../lib/format'
+import { fmtTimeIn, speedUnit, tzLabel, speedValue } from '../lib/format'
 
 const rad = (deg: number) => (deg * Math.PI) / 180
 
@@ -32,6 +32,7 @@ function DaylightBar({ points }: { points: WeatherPoint[] }) {
   const start = points[0].time.getTime()
   const end = points[points.length - 1].time.getTime()
   const span = Math.max(end - start, 1)
+  const tz = points[0].tz
   const N = 120
   const cells = Array.from({ length: N }, (_, i) => {
     const t = start + (span * (i + 0.5)) / N
@@ -48,7 +49,7 @@ function DaylightBar({ points }: { points: WeatherPoint[] }) {
     .map((e) => ({ ...e, pct: ((e.t.getTime() - start) / span) * 100 }))
 
   return (
-    <Card title="Daylight along the ride" sub={`${fmtTime(points[0].time)} → ${fmtTime(points[points.length - 1].time)}`}>
+    <Card title="Daylight along the ride" sub={`${fmtTimeIn(points[0].time, tz)} → ${fmtTimeIn(points[points.length - 1].time, tz)} ${tzLabel(points[0].time, tz)}`}>
       <div className="flex h-3 gap-px overflow-hidden rounded-full">
         {cells.map((c, i) => (
           <span key={i} className={`flex-1 ${c}`} />
@@ -57,7 +58,7 @@ function DaylightBar({ points }: { points: WeatherPoint[] }) {
       <div className="relative mt-3 h-8 text-[10px] text-zinc-400">
         {events.map((e) => (
           <span key={`${e.label}-${e.t.getTime()}`} className="absolute whitespace-nowrap" style={{ left: `${e.pct}%`, transform: `translateX(${e.pct < 15 ? 0 : e.pct > 85 ? -100 : -50}%)` }}>
-            {e.label} {fmtTime(e.t)}
+            {e.label} {fmtTimeIn(e.t, tz)}
           </span>
         ))}
       </div>

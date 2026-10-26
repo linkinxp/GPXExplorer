@@ -51,6 +51,18 @@ export const fmtDateTime = (d: Date | null) =>
 export const fmtTime = (d: Date | null) =>
   d ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '—'
 
+/** Clock time in a given IANA time zone (the ride's location), falling back to the viewer's zone. */
+export const fmtTimeIn = (d: Date | null, tz?: string) =>
+  d ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', timeZone: tz }) : '—'
+
+/** Short zone label such as EDT or GMT+10 for a time zone at a given instant. */
+export function tzLabel(d: Date, tz?: string): string {
+  const part = new Intl.DateTimeFormat(undefined, { timeZone: tz, timeZoneName: 'short' })
+    .formatToParts(d)
+    .find((p) => p.type === 'timeZoneName')
+  return part?.value ?? ''
+}
+
 export const fmtNum = (n: number | null, digits = 0, unit = '') =>
   n === null ? '—' : `${n.toFixed(digits)}${unit}`
 
