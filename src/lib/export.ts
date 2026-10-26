@@ -2,7 +2,7 @@ import type { GpxFile, TrackPoint } from '../types'
 import { haversine } from './geo'
 
 export function pointsToCsv(points: TrackPoint[]): string {
-  const header = 'index,lat,lon,ele_m,time_utc,distance_m,hr_bpm,cadence_rpm,temp_c'
+  const header = 'index,lat,lon,ele_m,time_utc,distance_m,hr_bpm,cadence_rpm,temp_c,power_w'
   let dist = 0
   const rows = points.map((p, i) => {
     if (i > 0) dist += haversine(points[i - 1].lat, points[i - 1].lon, p.lat, p.lon)
@@ -16,6 +16,7 @@ export function pointsToCsv(points: TrackPoint[]): string {
       p.hr ?? '',
       p.cad ?? '',
       p.temp ?? '',
+      p.power ?? '',
     ].join(',')
   })
   return [header, ...rows].join('\n')

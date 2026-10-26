@@ -41,6 +41,7 @@ export interface ProfilePoint {
   grade: number
   hr: number | null
   power: number | null
+  cad: number | null
   speed: number | null
   t: number | null
 }

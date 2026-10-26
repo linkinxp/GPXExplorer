@@ -1,6 +1,7 @@
 import { useMemo, type MouseEvent } from 'react'
 import type { Analysis, ProfilePoint } from '../types'
 import { distUnit, fmtKm, speedUnit, speedValue } from '../lib/format'
+import { CardIcon } from './CardIcon'
 import { BestSpeeds, SpeedHistogram } from './SpeedInsights'
 
 const W = 800
@@ -10,7 +11,7 @@ const PAD_R = 8
 const PAD_T = 10
 const PAD_B = 6
 
-type Field = 'hr' | 'speed'
+type Field = 'hr' | 'speed' | 'power' | 'cad'
 
 interface EffortChartProps {
   a: Analysis
@@ -24,8 +25,14 @@ export function EffortChart({ a, hoverD, onHover }: EffortChartProps) {
       {a.avgHr !== null && (
         <Trace title="Heart rate" unit="bpm" color="#fb7185" field="hr" a={a} hoverD={hoverD} onHover={onHover} />
       )}
+      {a.avgPower !== null && (
+        <Trace title="Power" unit="W" color="#a78bfa" field="power" a={a} hoverD={hoverD} onHover={onHover} />
+      )}
       {a.avgMovingSpeed !== null && (
         <Trace title="Speed" unit={speedUnit()} color="#38bdf8" field="speed" a={a} hoverD={hoverD} onHover={onHover} />
+      )}
+      {a.avgCad !== null && (
+        <Trace title="Cadence" unit="rpm" color="#fbbf24" field="cad" a={a} hoverD={hoverD} onHover={onHover} />
       )}
       <SpeedHistogram a={a} />
       <BestSpeeds a={a} />
@@ -89,13 +96,14 @@ function Trace({
     onHover(d >= 0 && d <= g.total ? d : null)
   }
 
-  const decimals = field === 'hr' ? 0 : 1
+  const decimals = field === 'hr' || field === 'power' || field === 'cad' ? 0 : 1
   const readout = hoverD === null || g.pts.length === 0 ? null : nearest(g.pts, hoverD)
   const ticks = [g.lo, (g.lo + g.hi) / 2, g.hi]
 
   return (
-    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-5">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
+    <div className="relative rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-5">
+      <CardIcon label={title} />
+      <div className="mb-3 flex items-baseline justify-between gap-3 pr-10">
         <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
         <span className="tabular text-xs text-zinc-400">
           {readout !== null

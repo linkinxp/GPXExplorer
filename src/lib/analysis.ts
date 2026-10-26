@@ -154,7 +154,10 @@ export function analyse(gpx: GpxFile): Analysis {
     ? resampleAt(pts, pts.map((p) => (p.time as Date).getTime() / 1000), cum, targets).map((r) => r.ele)
     : null
   const powerSeries = pts.some((p) => p.power !== null)
-    ? resampleAt(pts, fillForward(pts.map((p) => p.power)), cum, targets).map((r) => r.ele)
+    ? resampleAt(pts, movingAverage(fillForward(pts.map((p) => p.power)), 4), cum, targets).map((r) => r.ele)
+    : null
+  const cadSeries = pts.some((p) => p.cad !== null)
+    ? resampleAt(pts, fillForward(pts.map((p) => p.cad)), cum, targets).map((r) => r.ele)
     : null
   const speedHalf = 5
   const speedAt = (k: number) => {
@@ -173,6 +176,7 @@ export function analyse(gpx: GpxFile): Analysis {
     grade: grade[k],
     hr: hrSeries ? hrSeries[k] : null,
     power: powerSeries ? powerSeries[k] : null,
+    cad: cadSeries ? cadSeries[k] : null,
     speed: speedAt(k),
     t: timeSeries ? timeSeries[k] - timeSeries[0] : null,
   }))
@@ -312,6 +316,13 @@ export function analyse(gpx: GpxFile): Analysis {
     start: { lat: first.lat, lon: first.lon },
     end: { lat: last.lat, lon: last.lon },
   }
+}
+
+function movingAverage(vals: number[], half: number): number[] {
+  return vals.map((_, i) => {
+    const win = vals.slice(Math.max(0, i - half), i + half + 1)
+    return win.reduce((a, b) => a + b, 0) / win.length
+  })
 }
 
 function fillForward(vals: (number | null)[]): number[] {

@@ -3,17 +3,42 @@ import { CLIMB_COLOR } from '../components/RouteMap'
 import { gradeColor } from './analysis'
 import { fmtDateTime, fmtDuration, fmtKm, fmtM, fmtPct, fmtSpeed } from './format'
 
+export interface RideCardMetric {
+  key: string
+  label: string
+  value: (a: Analysis) => string | null
+}
+
+export const RC_METRICS: RideCardMetric[] = [
+  { key: 'distance', label: 'Distance', value: (a) => fmtKm(a.totalDistanceM, 1) },
+  { key: 'gain', label: 'Elevation gain', value: (a) => fmtM(a.elevGainM) },
+  { key: 'moving', label: 'Moving time', value: (a) => (a.movingS !== null ? fmtDuration(a.movingS) : null) },
+  { key: 'speed', label: 'Avg speed', value: (a) => (a.avgMovingSpeed !== null ? fmtSpeed(a.avgMovingSpeed) : null) },
+  { key: 'climbs', label: 'Climbs', value: (a) => String(a.climbs.length) },
+  { key: 'maxgrade', label: 'Max grade', value: (a) => fmtPct(a.maxGrade) },
+  { key: 'elapsed', label: 'Elapsed time', value: (a) => (a.elapsedS !== null ? fmtDuration(a.elapsedS) : null) },
+  { key: 'maxele', label: 'Max elevation', value: (a) => (a.maxEle !== null ? fmtM(a.maxEle) : null) },
+  { key: 'avgpower', label: 'Avg power', value: (a) => (a.avgPower !== null ? `${Math.round(a.avgPower)} W` : null) },
+  { key: 'maxpower', label: 'Max power', value: (a) => (a.maxPower !== null ? `${Math.round(a.maxPower)} W` : null) },
+  { key: 'avghr', label: 'Avg heart rate', value: (a) => (a.avgHr !== null ? `${Math.round(a.avgHr)} bpm` : null) },
+  { key: 'maxhr', label: 'Max heart rate', value: (a) => (a.maxHr !== null ? `${Math.round(a.maxHr)} bpm` : null) },
+  { key: 'avgcad', label: 'Avg cadence', value: (a) => (a.avgCad !== null ? `${Math.round(a.avgCad)} rpm` : null) },
+  { key: 'avgtemp', label: 'Avg temperature', value: (a) => (a.avgTemp !== null ? `${Math.round(a.avgTemp)} °C` : null) },
+]
+
+export const RC_DEFAULT = ['distance', 'gain', 'moving', 'speed', 'climbs', 'maxgrade']
+
 const W = 1200
 const H = 630
 const FONT = 'system-ui, -apple-system, Segoe UI, sans-serif'
 
-export function downloadRideCard(a: Analysis, slug: string) {
+export function downloadRideCard(a: Analysis, slug: string, sel: string[]) {
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const g = canvas.getContext('2d')
   if (!g) return
-  paint(g, a)
+  paint(g, a, sel)
   canvas.toBlob((blob) => {
     if (!blob) return
     const url = URL.createObjectURL(blob)
@@ -25,7 +50,7 @@ export function downloadRideCard(a: Analysis, slug: string) {
   }, 'image/png')
 }
 
-function paint(g: CanvasRenderingContext2D, a: Analysis) {
+function paint(g: CanvasRenderingContext2D, a: Analysis, sel: string[]) {
   g.fillStyle = '#09090b'
   g.fillRect(0, 0, W, H)
   const glowA = g.createRadialGradient(0, 0, 0, 0, 0, 900)
@@ -92,20 +117,15 @@ function paint(g: CanvasRenderingContext2D, a: Analysis) {
   text(g, truncate(g, a.name, 540, `700 56px ${FONT}`), 60, 168, `700 56px ${FONT}`, '#fafafa')
   text(g, a.startTime ? fmtDateTime(a.startTime) : '', 60, 210, `400 22px ${FONT}`, '#a1a1aa')
 
-  const tiles: [string, string][] = [
-    ['Distance', fmtKm(a.totalDistanceM, 1)],
-    ['Elevation gain', fmtM(a.elevGainM)],
-    ['Moving time', a.movingS !== null ? fmtDuration(a.movingS) : '—'],
-    ['Avg speed', fmtSpeed(a.avgMovingSpeed)],
-    ['Climbs', String(a.climbs.length)],
-    ['Max grade', fmtPct(a.maxGrade)],
-  ]
-  tiles.forEach(([label, value], i) => {
-    const x = 60 + (i % 3) * 190
-    const y = 300 + Math.floor(i / 3) * 150
-    text(g, label.toUpperCase(), x, y, `600 15px ${FONT}`, '#71717a', 2)
-    text(g, value, x, y + 50, `600 36px ${FONT}`, '#fafafa')
-  })
+  RC_METRICS.filter((m) => sel.includes(m.key) && m.value(a) !== null)
+    .map((m) => [m.label, m.value(a) as string] as const)
+    .forEach(([label, value], i, all) => {
+      const dense = all.length > 6
+      const x = 60 + (i % 3) * 190
+      const y = 300 + Math.floor(i / 3) * (dense ? 100 : 150)
+      text(g, label.toUpperCase(), x, y, `600 15px ${FONT}`, '#71717a', 2)
+      text(g, value, x, y + (dense ? 46 : 50), `600 36px ${FONT}`, '#fafafa')
+    })
 
   text(g, 'gpx.linkinxp.com', 60, H - 48, `500 18px ${FONT}`, '#52525b', 1)
 }

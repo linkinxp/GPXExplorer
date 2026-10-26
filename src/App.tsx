@@ -23,7 +23,7 @@ import {
 import { Dropzone } from './components/Dropzone'
 import { StatGrid } from './components/StatGrid'
 import { NumberTicker } from './components/magic/number-ticker'
-import { downloadRideCard } from './lib/ridecard'
+import { RC_DEFAULT, downloadRideCard } from './lib/ridecard'
 import { RouteMap } from './components/RouteMap'
 import { StreetMap } from './components/StreetMap'
 import { ClimbCurtain } from './components/ClimbCurtain'
@@ -33,6 +33,8 @@ import { GradientRibbon } from './components/GradientRibbon'
 import { EffortChart } from './components/EffortChart'
 import { GarminImport } from './components/GarminImport'
 import { WahooImport } from './components/WahooImport'
+import { StravaImport } from './components/StravaImport'
+import { RideCardDialog } from './components/RideCardDialog'
 import { ClimbsPanel } from './components/ClimbsPanel'
 import { WeatherPanel } from './components/WeatherPanel'
 import { EffortZones } from './components/EffortZones'
@@ -55,16 +57,25 @@ interface Loaded {
 const NAV = [
   { id: 'stats', label: 'Overview' },
   { id: 'route', label: 'Route' },
+  { id: 'effort', label: 'Effort' },
   { id: 'climbs', label: 'Climbs' },
   { id: 'weather', label: 'Weather' },
-  { id: 'effort', label: 'Effort' },
   { id: 'data', label: 'Data' },
 ]
 
 const FEATURES = [
-  { title: 'Real route understanding', body: 'Smoothed elevation, 10 m resampling and turning-point detection so GPS noise does not invent climbs.' },
-  { title: 'Climbs, categorised', body: 'Every climb of 400 m or more at 3% average, scored and graded HC through Cat 4.' },
-  { title: 'Weather where you ride', body: 'Temperature, wind and headwind for five points along the route, timed from your start.' },
+  {
+    title: 'One view for every source',
+    body: 'Garmin Connect, Strava, GPX and FIT rides open in the same dashboard, keeping power, heart rate and cadence when the file has them.',
+  },
+  {
+    title: 'Climbs and power',
+    body: 'Climbs are detected and categorised automatically, alongside power zones and a smoothed power chart.',
+  },
+  {
+    title: 'Weather and sharing',
+    body: 'Temperature and wind along the route, plus share links anyone can open for 14 days.',
+  },
 ]
 
 const SHOW_WAHOO = false
@@ -100,11 +111,17 @@ export default function App() {
   const [selected, setSelected] = useState<Climb | null>(null)
   const [garminOpen, setGarminOpen] = useState(false)
   const [wahooOpen, setWahooOpen] = useState(false)
+  const [stravaOpen, setStravaOpen] = useState(false)
   useEffect(() => {
     const p = new URLSearchParams(location.search)
-    if (!p.has('wahoo')) return
-    setWahooOpen(true)
-    p.delete('wahoo')
+    if (p.has('strava')) {
+      setStravaOpen(true)
+      p.delete('strava')
+    }
+    if (p.has('wahoo')) {
+      setWahooOpen(true)
+      p.delete('wahoo')
+    }
     history.replaceState(null, '', `${location.pathname}${p.toString() ? `?${p}` : ''}`)
   }, [])
   const [units, setUnits] = useState<UnitSystem>(readUnits)
@@ -255,8 +272,7 @@ export default function App() {
           onSample={loadSample}
           onGarmin={() => setGarminOpen(true)}
           onWahoo={() => setWahooOpen(true)}
-          units={units}
-          onUnits={changeUnits}
+          onStrava={() => setStravaOpen(true)}
           saved={saved}
           onOpenSaved={openSaved}
           onRemoveSaved={(id) => setSaved(removeSaved(id))}
@@ -264,6 +280,7 @@ export default function App() {
       )}
       {garminOpen && <GarminImport onLoad={loadText} onClose={() => setGarminOpen(false)} />}
       {wahooOpen && <WahooImport onLoad={loadText} onClose={() => setWahooOpen(false)} />}
+      {stravaOpen && <StravaImport onLoad={loadText} onClose={() => setStravaOpen(false)} />}
       {toast && (
         <div className="anim-toast fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 shadow-lg">
           {toast}
@@ -280,8 +297,7 @@ function Hero({
   onSample,
   onGarmin,
   onWahoo,
-  units,
-  onUnits,
+  onStrava,
   saved,
   onOpenSaved,
   onRemoveSaved,
@@ -292,8 +308,7 @@ function Hero({
   onSample: () => void
   onGarmin: () => void
   onWahoo: () => void
-  units: UnitSystem
-  onUnits: (u: UnitSystem) => void
+  onStrava: () => void
   saved: SavedRoute[]
   onOpenSaved: (r: SavedRoute) => void
   onRemoveSaved: (id: string) => void
@@ -322,8 +337,9 @@ function Hero({
       </BlurFade>
       <BlurFade delay={0.2} inView={false}>
         <p className="mt-5 max-w-2xl text-lg text-zinc-400">
-          Plan a ride before you ride. Drop a planned route and get distance, gradient, climbs, the weather you
-          will ride through and a fly-by of every climb. All parsing happens in your browser.
+          Import a GPX or Garmin FIT file, or pull a ride straight from Garmin Connect or Strava. See distance, climbs,
+          power, heart rate, cadence and the weather you rode in, with a fly-by of every climb. All parsing happens in
+          your browser.
         </p>
       </BlurFade>
 
@@ -335,16 +351,35 @@ function Hero({
       </BlurFade>
 
       <BlurFade delay={0.36} inView={false} className="mt-5 flex flex-wrap items-center gap-4">
-        <ShimmerButton onClick={onSample} disabled={busy} className="h-11 px-6 text-sm">
+        <style>{'.gpx-src-btn{width:100%}@media (min-width:640px){.gpx-src-btn{width:auto}}'}</style>
+        <ShimmerButton onClick={onSample} disabled={busy} className="gpx-src-btn h-11 px-6 text-sm">
           Try the sample route
         </ShimmerButton>
         <button
           type="button"
           onClick={onGarmin}
           disabled={busy}
-          className="h-11 rounded-full px-6 text-sm font-medium text-zinc-200 ring-1 ring-white/15 transition hover:bg-white/5 disabled:opacity-50"
+          className="gpx-src-btn h-11 rounded-full px-6 text-sm font-medium text-zinc-200 ring-1 ring-white/15 transition hover:bg-white/5 disabled:opacity-50"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
         >
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="6" y="6" width="12" height="12" rx="3" />
+            <path d="M9 6V2h6v4M9 18v4h6v-4M12 9v3l2 1" />
+          </svg>
           Import from Garmin
+        </button>
+        <button
+          type="button"
+          onClick={onStrava}
+          disabled={busy}
+          className="gpx-src-btn h-11 rounded-full px-6 text-sm font-medium text-zinc-200 ring-1 ring-white/15 transition hover:bg-white/5 disabled:opacity-50"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 11L9 2L14 11H11.2L9 6.9L6.8 11Z" fill="currentColor" />
+            <path d="M10.5 14.5L13.5 20L16.5 14.5" fill="currentColor" />
+          </svg>
+          Import from Strava
         </button>
         {SHOW_WAHOO && (
           <button
@@ -356,11 +391,10 @@ function Hero({
             Import from Wahoo
           </button>
         )}
-        <span className="text-xs text-zinc-500">No file? Explore a generated loop with three climbs.</span>
         <div className="ml-auto flex items-center gap-2">
           <InstallButton />
-          <UnitToggle value={units} onChange={onUnits} />
         </div>
+        <p className="w-full text-xs text-zinc-500">No file? Explore a generated loop with three climbs.</p>
       </BlurFade>
 
       {saved.length > 0 && (
@@ -444,9 +478,23 @@ function Dashboard({
   const slug = gpx.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'route'
   const focusRange = selected ? { startD: selected.startD, endD: selected.endD } : null
   const [routeView, setRouteView] = useState<'curtain' | 'map'>('curtain')
+  const [rcOpen, setRcOpen] = useState(false)
+  const [rcSel, setRcSel] = useState<string[]>(RC_DEFAULT)
 
   return (
     <>
+      {rcOpen && (
+        <RideCardDialog
+          analysis={a}
+          sel={rcSel}
+          setSel={setRcSel}
+          onDownload={() => {
+            downloadRideCard(a, slug, rcSel)
+            setRcOpen(false)
+          }}
+          onClose={() => setRcOpen(false)}
+        />
+      )}
       <nav className="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
           <span className="text-sm font-semibold tracking-tight text-zinc-100">GPX Explorer</span>
@@ -476,7 +524,7 @@ function Dashboard({
             </button>
             <button
               type="button"
-              onClick={() => downloadRideCard(a, slug)}
+              onClick={() => setRcOpen(true)}
               className="hidden rounded-xl px-3 py-1.5 text-sm text-zinc-300 ring-1 ring-white/10 transition hover:bg-white/5 md:block"
             >
               Ride card
@@ -552,6 +600,15 @@ function Dashboard({
         </Section>
 
         <Section
+          id="effort"
+          title="Effort and cadence"
+          subtitle="Time in each heart-rate zone and how your cadence was spread."
+          delay={0.05}
+        >
+          <EffortZones points={points} maxHr={a.maxHr} />
+        </Section>
+
+        <Section
           id="climbs"
           title="Climbs and steep sections"
           subtitle="Climbs are at least 400 m long at a 3% average. Select one to highlight it on the profile."
@@ -567,15 +624,6 @@ function Dashboard({
           delay={0.05}
         >
           <WeatherPanel a={a} />
-        </Section>
-
-        <Section
-          id="effort"
-          title="Effort and cadence"
-          subtitle="Time in each heart-rate zone and how your cadence was spread."
-          delay={0.05}
-        >
-          <EffortZones points={points} maxHr={a.maxHr} />
         </Section>
 
         <Section id="data" title="Raw data" subtitle="Waypoints, file metadata and every track point." delay={0.05}>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CardIcon } from './CardIcon'
 import type { Analysis } from '../types'
 import { NumberTicker } from './magic/number-ticker'
 import { MagicCard } from './magic/magic-card'
@@ -121,7 +122,8 @@ export function StatGrid({ a }: { a: Analysis }) {
           gradientOpacity={0.9}
           className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70"
         >
-          <div className="p-5">
+          <div className="relative p-5">
+            <CardIcon label={t.label} />
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{t.label}</p>
             <p className={cn('tabular mt-2 text-2xl font-semibold tracking-tight md:text-3xl', toneText[t.tone ?? 'default'])}>
               {t.value}

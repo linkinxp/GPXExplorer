@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { fmtDateTime, fmtDuration, fmtKm, fmtM, fmtSpeed } from '../lib/format'
 
-interface Activity {
+export interface Activity {
   id: number
   name: string
   type: string
@@ -15,15 +15,15 @@ interface Activity {
 }
 
 type Step = 'checking' | 'signed-out' | 'mfa' | 'signed-in'
-type Range = '7' | '30' | 'all'
+export type Range = '7' | '30' | 'all'
 
-const RANGES: { value: Range; label: string }[] = [
+export const RANGES: { value: Range; label: string }[] = [
   { value: '7', label: 'Last 7' },
   { value: '30', label: 'Last 30' },
   { value: 'all', label: 'All' },
 ]
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init)
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`)
