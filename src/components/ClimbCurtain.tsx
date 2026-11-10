@@ -3,8 +3,7 @@ import type { Analysis, Climb, ClimbCategory } from '../types'
 import { GRADE_BUCKETS, gradeColor } from '../lib/analysis'
 import { distUnit, distUnitM, elevUnit, elevValue, fmtKm, fmtM, fmtPct, getUnitSystem } from '../lib/format'
 
-const W = 800
-const H = 430
+const NARROW_PX = 640
 const PAD_L = 56
 const PAD_R = 22
 const PAD_T = 66
@@ -37,6 +36,17 @@ interface ClimbCurtainProps {
 export function ClimbCurtain({ a, hoverD, onHover, selectedId }: ClimbCurtainProps) {
   const [is3d, setIs3d] = useState(true)
   const [playing, setPlaying] = useState(false)
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < NARROW_PX)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${NARROW_PX - 1}px)`)
+    const on = () => setNarrow(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  // Phones get a narrower, taller drawing so the climb fills the screen instead of shrinking to fit.
+  const W = narrow ? 420 : 800
+  const H = narrow ? 600 : 430
 
   const units = getUnitSystem()
   const g = useMemo(() => {
@@ -95,7 +105,7 @@ export function ClimbCurtain({ a, hoverD, onHover, selectedId }: ClimbCurtainPro
     })
 
     return { base, plotW, total, dx, dy, X, Y, columns, ridgeD, backRidgeD, climbs, ticksX, ticksY }
-  }, [a, is3d, units])
+  }, [a, is3d, W, H, units])
 
   const hoverPoint = useMemo(() => {
     if (hoverD === null || !a.profile.length) return null
