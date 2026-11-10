@@ -32,7 +32,9 @@ export const GRADE_BUCKETS: Omit<GradeBucket, 'distanceM'>[] = [
   { label: '1 to 3%', min: 1, max: 3, color: '#a3e635' },
   { label: '3 to 6%', min: 3, max: 6, color: '#fbbf24' },
   { label: '6 to 9%', min: 6, max: 9, color: '#fb923c' },
-  { label: '≥ 9%', min: 9, max: Infinity, color: '#f43f5e' },
+  { label: '9 to 12%', min: 9, max: 12, color: '#f43f5e' },
+  { label: '12 to 15%', min: 12, max: 15, color: '#d946ef' },
+  { label: '≥ 15%', min: 15, max: Infinity, color: '#8b5cf6' },
 ]
 
 export function gradeColor(grade: number): string {
