@@ -616,7 +616,16 @@ function Dashboard({
             subtitle="Segment records and personal bests from this ride. Hover one to see where it happened."
             delay={0.05}
           >
-            <AchievementsPanel data={gpx.achievements} onHover={onHover} />
+            <AchievementsPanel
+              data={gpx.achievements}
+              onHover={onHover}
+              locate={(ms) => {
+                if (!a.startTime) return null
+                const t = (ms - a.startTime.getTime()) / 1000
+                const p = a.profile.find((q) => q.t !== null && q.t >= t)
+                return p ? p.d : null
+              }}
+            />
           </Section>
         )}
 

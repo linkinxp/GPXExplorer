@@ -1,10 +1,12 @@
-import type { Achievements, AchievementEffort } from '../types'
-import { fmtDuration, fmtKm, fmtPct } from '../lib/format'
+import type { Achievements, AchievementEffort, AchievementRecord } from '../types'
+import { fmtDuration, fmtKm, fmtM, fmtPct } from '../lib/format'
 import { cardClass } from './Section'
 
 interface AchievementsPanelProps {
   data: Achievements
   onHover: (d: number | null) => void
+  // Maps a clock time (epoch ms) to a distance along the route.
+  locate?: (ms: number) => number | null
 }
 
 interface Badge {
@@ -34,22 +36,54 @@ function badgesFor(e: AchievementEffort): Badge[] {
   return out
 }
 
-export function AchievementsPanel({ data, onHover }: AchievementsPanelProps) {
+function recordValue(r: AchievementRecord): string {
+  switch (r.kind) {
+    case 'time': return fmtDuration(r.value)
+    case 'distance': return fmtKm(r.value, 1)
+    case 'ascent': return fmtM(r.value)
+    case 'power': return `${Math.round(r.value)} W`
+  }
+}
+
+export function AchievementsPanel({ data, onHover, locate }: AchievementsPanelProps) {
   const rows = data.efforts
     .map((e) => ({ e, badges: badgesFor(e) }))
     .filter((r) => r.badges.length > 0)
     .sort((a, b) => Math.max(...b.badges.map((x) => x.weight)) - Math.max(...a.badges.map((x) => x.weight)))
   const koms = data.efforts.filter((e) => e.komRank === 1).length
+  const records = data.records ?? []
+  const isStrava = data.source === 'strava'
   const source = data.source === 'strava' ? 'Strava' : 'Garmin'
 
   return (
     <div className={cardClass}>
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className={`grid gap-3 text-center ${isStrava ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <Stat value={data.count} label="Achievements" />
         <Stat value={data.prCount} label="Personal records" />
-        <Stat value={koms} label="KOM / QOM" />
+        {isStrava && <Stat value={koms} label="KOM / QOM" />}
       </div>
-      {rows.length === 0 ? (
+      {records.length > 0 && (
+        <ul className="mt-5 divide-y divide-zinc-800/80">
+          {records.map((r) => {
+            const at = r.startMs !== null && locate ? locate(r.startMs) : null
+            return (
+              <li
+                key={r.label}
+                className="py-3"
+                onMouseEnter={() => at !== null && onHover(at)}
+                onMouseLeave={() => onHover(null)}
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <span className="text-sm font-medium text-zinc-100">{r.label}</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${GOLD}`}>Personal record</span>
+                </div>
+                <p className="tabular mt-1 text-xs text-zinc-400">{recordValue(r)}</p>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {rows.length === 0 && records.length > 0 ? null : rows.length === 0 ? (
         <p className="mt-5 text-sm text-zinc-400">{source} recorded no segment achievements for this ride.</p>
       ) : (
         <ul className="mt-5 divide-y divide-zinc-800/80">

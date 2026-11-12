@@ -188,6 +188,52 @@ def is_cycling(a):
 
 
 
+# Garmin personal-record type ids that apply to a single activity: (label, how the value is shown).
+GARMIN_PR_TYPES = {
+    1: ('Fastest 1 km', 'time'),
+    2: ('Fastest 1 mile', 'time'),
+    3: ('Fastest 5 km', 'time'),
+    4: ('Fastest 10 km', 'time'),
+    5: ('Fastest half marathon', 'time'),
+    6: ('Fastest marathon', 'time'),
+    7: ('Longest run', 'distance'),
+    8: ('Longest ride', 'distance'),
+    9: ('Most climbing in a ride', 'ascent'),
+    10: ('Best average power', 'power'),
+    11: ('Fastest 40 km', 'time'),
+    17: ('Longest swim', 'distance'),
+    18: ('Fastest 100 m swim', 'time'),
+}
+
+
+def garmin_achievements(g, aid):
+    records = []
+    for r in g.get_personal_record() or []:
+        if r.get('activityId') != aid or r.get('status') not in (None, 'ACCEPTED'):
+            continue
+        meta = GARMIN_PR_TYPES.get(r.get('typeId'))
+        if not meta or r.get('value') is None:
+            continue
+        records.append({
+            'label': meta[0],
+            'kind': meta[1],
+            'value': r['value'],
+            'startMs': r.get('prStartTimeGmt'),
+        })
+    if not records:
+        return None
+    return {'source': 'garmin', 'count': len(records), 'prCount': len(records), 'efforts': [], 'records': records}
+
+
+def with_achievements(text, ach):
+    if not ach:
+        return text
+    block = f'<achievements>{escape(json.dumps(ach, separators=(",", ":")))}</achievements>'
+    if '</metadata>' in text:
+        return text.replace('</metadata>', f'<extensions>{block}</extensions></metadata>', 1)
+    return re.sub(r'(<gpx\b[^>]*>)', lambda m: m.group(1) + f'<metadata><extensions>{block}</extensions></metadata>', text, count=1)
+
+
 @app.get('/api/garmin/activities/<int:aid>/gpx')
 def garmin_gpx(aid):
     g = get_client()
@@ -214,6 +260,10 @@ def garmin_gpx(aid):
         text = raw.decode('utf-8', 'ignore') if isinstance(raw, bytes) else str(raw)
     if '<trkpt' not in text:
         return jsonify(error='This activity has no GPS track.'), 422
+    try:
+        text = with_achievements(text, garmin_achievements(g, aid))
+    except Exception:
+        pass
     return Response(text, mimetype='application/gpx+xml')
 
 

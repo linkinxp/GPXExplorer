@@ -68,6 +68,7 @@ function parseAchievements(meta: Element | null): Achievements | null {
       count: Number(v.count) || 0,
       prCount: Number(v.prCount) || 0,
       efforts: v.efforts,
+      records: Array.isArray(v.records) ? v.records : [],
     }
   } catch {
     return null

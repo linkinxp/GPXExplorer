@@ -37,11 +37,19 @@ export interface AchievementEffort {
   endM: number | null
 }
 
+export interface AchievementRecord {
+  label: string
+  kind: 'time' | 'distance' | 'ascent' | 'power'
+  value: number
+  startMs: number | null
+}
+
 export interface Achievements {
   source: 'strava' | 'garmin'
   count: number
   prCount: number
   efforts: AchievementEffort[]
+  records?: AchievementRecord[]
 }
 
 export interface GpxFile {
