@@ -31,6 +31,7 @@ import { ElevationProfile } from './components/ElevationProfile'
 import { GradientChart } from './components/GradientChart'
 import { GradientRibbon } from './components/GradientRibbon'
 import { EffortChart } from './components/EffortChart'
+import { SideNav, SIDE_ICONS } from './components/SideNav'
 import { AchievementsPanel } from './components/AchievementsPanel'
 import { GarminImport } from './components/GarminImport'
 import { WahooImport } from './components/WahooImport'
@@ -541,7 +542,19 @@ function Dashboard({
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl px-6 pb-24 pt-10">
+      <SideNav
+        items={[
+          { id: 'top', label: 'Top' },
+          { id: 'stats', label: 'Overview' },
+          { id: 'route', label: 'Route' },
+          { id: 'effort', label: 'Effort' },
+          ...(gpx.achievements ? [{ id: 'achievements', label: 'Achievements' }] : []),
+          { id: 'climbs', label: 'Climbs' },
+          { id: 'weather', label: 'Weather' },
+          { id: 'data', label: 'Data' },
+        ].map((n) => ({ ...n, icon: SIDE_ICONS[n.id] }))}
+      />
+      <main className="mx-auto max-w-7xl px-6 pb-24 pr-14 pt-10 2xl:pr-6">
         <BlurFade inView={false}>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-300/80">
             {gpx.tracks.length ? 'Track' : 'Route'} · {gpx.creator ?? 'GPX'}
