@@ -31,6 +31,7 @@ import { ElevationProfile } from './components/ElevationProfile'
 import { GradientChart } from './components/GradientChart'
 import { GradientRibbon } from './components/GradientRibbon'
 import { EffortChart } from './components/EffortChart'
+import { AchievementsPanel } from './components/AchievementsPanel'
 import { GarminImport } from './components/GarminImport'
 import { WahooImport } from './components/WahooImport'
 import { StravaImport } from './components/StravaImport'
@@ -607,6 +608,17 @@ function Dashboard({
         >
           <EffortZones points={points} maxHr={a.maxHr} />
         </Section>
+
+        {gpx.achievements && (
+          <Section
+            id="achievements"
+            title="Achievements"
+            subtitle="Segment records and personal bests from this ride. Hover one to see where it happened."
+            delay={0.05}
+          >
+            <AchievementsPanel data={gpx.achievements} onHover={onHover} />
+          </Section>
+        )}
 
         <Section
           id="climbs"

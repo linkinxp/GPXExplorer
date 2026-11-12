@@ -606,6 +606,40 @@ def strava_activities():
     return jsonify(activities=out)
 
 
+def strava_achievements(act, dists):
+    def dist_at(i):
+        if isinstance(i, int) and 0 <= i < len(dists) and dists[i] is not None:
+            return round(dists[i])
+        return None
+
+    efforts = []
+    for e in act.get('segment_efforts') or []:
+        ach = [{'type': a.get('type'), 'rank': a.get('rank')} for a in (e.get('achievements') or []) if a.get('type')]
+        pr, kom = e.get('pr_rank'), e.get('kom_rank')
+        if not (ach or pr or kom):
+            continue
+        seg = e.get('segment') or {}
+        efforts.append({
+            'name': e.get('name') or seg.get('name') or 'Segment',
+            'timeS': e.get('elapsed_time'),
+            'distM': round(e.get('distance') or seg.get('distance') or 0),
+            'grade': seg.get('average_grade'),
+            'prRank': pr,
+            'komRank': kom,
+            'achievements': ach,
+            'startM': dist_at(e.get('start_index')),
+            'endM': dist_at(e.get('end_index')),
+        })
+    if not efforts and not act.get('achievement_count'):
+        return None
+    return {
+        'source': 'strava',
+        'count': act.get('achievement_count') or 0,
+        'prCount': act.get('pr_count') or 0,
+        'efforts': efforts,
+    }
+
+
 @app.get('/api/strava/activities/<int:aid>/gpx')
 def strava_gpx(aid):
     tok = strava_access(request.cookies.get(STRAVA_COOKIE, ''))
@@ -615,7 +649,7 @@ def strava_gpx(aid):
     if ar.status_code != 200:
         return jsonify(error='Could not load this activity.'), 502
     act = ar.json()
-    sr = strava_get(tok, f'/activities/{aid}/streams', keys='time,latlng,altitude,heartrate,cadence,watts,temp', key_by_type='true')
+    sr = strava_get(tok, f'/activities/{aid}/streams', keys='time,latlng,altitude,heartrate,cadence,watts,temp,distance', key_by_type='true')
     if sr.status_code != 200:
         return jsonify(error="Could not load this activity's data."), 502
     streams = sr.json()
@@ -629,7 +663,9 @@ def strava_gpx(aid):
         return data if len(data) == n else [None] * n
 
     times, alts, hrs, cads, pwrs, temps = (series(k) for k in ('time', 'altitude', 'heartrate', 'cadence', 'watts', 'temp'))
+    dists = series('distance')
     start = datetime.strptime(act['start_date'], '%Y-%m-%dT%H:%M:%SZ')
+    ach = strava_achievements(act, dists)
     parts = []
     for i, (lat, lon) in enumerate(latlng):
         ext = ''.join(
@@ -646,7 +682,9 @@ def strava_gpx(aid):
         )
     text = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<gpx version="1.1" creator="gpx.linkinxp.com" xmlns="http://www.topografix.com/GPX/1/1"><trk>'
+        '<gpx version="1.1" creator="gpx.linkinxp.com" xmlns="http://www.topografix.com/GPX/1/1">'
+        + (f'<metadata><extensions><achievements>{escape(json.dumps(ach, separators=(",", ":")))}</achievements></extensions></metadata>' if ach else '')
+        + '<trk>'
         + f'<name>{escape(act.get("name") or "Ride")}</name><trkseg>'
         + ''.join(parts)
         + '</trkseg></trk></gpx>'

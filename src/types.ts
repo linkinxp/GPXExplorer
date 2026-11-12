@@ -25,6 +25,25 @@ export interface Waypoint {
   sym: string | null
 }
 
+export interface AchievementEffort {
+  name: string
+  timeS: number | null
+  distM: number
+  grade: number | null
+  prRank: number | null
+  komRank: number | null
+  achievements: { type: string; rank: number | null }[]
+  startM: number | null
+  endM: number | null
+}
+
+export interface Achievements {
+  source: 'strava' | 'garmin'
+  count: number
+  prCount: number
+  efforts: AchievementEffort[]
+}
+
 export interface GpxFile {
   name: string
   creator: string | null
@@ -32,6 +51,7 @@ export interface GpxFile {
   tracks: Track[]
   routes: Track[]
   waypoints: Waypoint[]
+  achievements: Achievements | null
 }
 
 export interface ProfilePoint {

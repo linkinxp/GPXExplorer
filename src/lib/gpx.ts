@@ -1,4 +1,4 @@
-import type { GpxFile, Track, TrackPoint, Waypoint } from '../types'
+import type { Achievements, GpxFile, Track, TrackPoint, Waypoint } from '../types'
 
 const num = (v: string | null | undefined): number | null => {
   if (v === null || v === undefined || v.trim() === '') return null
@@ -55,6 +55,25 @@ function parsePoint(el: Element): TrackPoint | null {
   }
 }
 
+// Imports from Strava/Garmin can carry achievements as JSON in <metadata><extensions><achievements>.
+function parseAchievements(meta: Element | null): Achievements | null {
+  const ext = meta ? childrenNamed(meta, 'extensions')[0] : undefined
+  const node = ext ? childrenNamed(ext, 'achievements')[0] : undefined
+  if (!node?.textContent) return null
+  try {
+    const v = JSON.parse(node.textContent)
+    if (!v || !Array.isArray(v.efforts)) return null
+    return {
+      source: v.source === 'garmin' ? 'garmin' : 'strava',
+      count: Number(v.count) || 0,
+      prCount: Number(v.prCount) || 0,
+      efforts: v.efforts,
+    }
+  } catch {
+    return null
+  }
+}
+
 export function parseGpx(xml: string, fileName: string): GpxFile {
   const doc = new DOMParser().parseFromString(xml, 'application/xml')
   const err = doc.getElementsByTagName('parsererror')[0]
@@ -108,5 +127,6 @@ export function parseGpx(xml: string, fileName: string): GpxFile {
     tracks,
     routes,
     waypoints,
+    achievements: parseAchievements(meta),
   }
 }
