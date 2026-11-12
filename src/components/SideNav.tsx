@@ -6,8 +6,6 @@ export interface SideNavItem {
   icon: string
 }
 
-const OFFSET = 72
-
 export const SIDE_ICONS: Record<string, string> = {
   top: 'M12 19V5M5 12l7-7 7 7',
   stats: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
@@ -19,7 +17,7 @@ export const SIDE_ICONS: Record<string, string> = {
   data: 'M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01',
 }
 
-export function SideNav({ items }: { items: SideNavItem[] }) {
+export function SideNav({ items, horizontal = false }: { items: SideNavItem[]; horizontal?: boolean }) {
   const [active, setActive] = useState<string>('top')
 
   useEffect(() => {
@@ -44,13 +42,18 @@ export function SideNav({ items }: { items: SideNavItem[] }) {
   const go = (id: string) => {
     if (id === 'top') return window.scrollTo({ top: 0, behavior: 'smooth' })
     const el = document.getElementById(id)
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - OFFSET, behavior: 'smooth' })
+    const header = document.querySelector<HTMLElement>('nav.sticky')?.offsetHeight ?? 56
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - header - 12, behavior: 'smooth' })
   }
 
   return (
     <nav
       aria-label="Sections"
-      className="fixed right-1.5 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-0.5 rounded-full border border-zinc-800/80 bg-zinc-950/75 p-1 shadow-xl shadow-black/40 backdrop-blur-xl md:right-3"
+      className={
+        horizontal
+          ? 'flex items-center justify-between gap-1 overflow-x-auto px-3 pb-2'
+          : 'fixed right-3 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-0.5 rounded-full border border-zinc-800/80 bg-zinc-950/75 p-1 shadow-xl shadow-black/40 backdrop-blur-xl md:flex'
+      }
     >
       {items.map((it) => {
         const on = active === it.id
@@ -61,7 +64,7 @@ export function SideNav({ items }: { items: SideNavItem[] }) {
             onClick={() => go(it.id)}
             aria-label={it.label}
             aria-current={on ? 'true' : undefined}
-            className={`group relative grid h-10 w-10 place-items-center rounded-full transition ${
+            className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-full transition ${
               on ? 'bg-emerald-400/15 text-emerald-300' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-200'
             }`}
           >
