@@ -158,6 +158,9 @@ export function analyse(gpx: GpxFile): Analysis {
   const powerSeries = pts.some((p) => p.power !== null)
     ? resampleAt(pts, movingAverage(fillForward(pts.map((p) => p.power)), 4), cum, targets).map((r) => r.ele)
     : null
+  const respSeries = pts.some((p) => p.resp !== null)
+    ? resampleAt(pts, movingAverage(fillForward(pts.map((p) => p.resp)), 6), cum, targets).map((r) => r.ele)
+    : null
   const cadSeries = pts.some((p) => p.cad !== null)
     ? resampleAt(pts, fillForward(pts.map((p) => p.cad)), cum, targets).map((r) => r.ele)
     : null
@@ -179,6 +182,7 @@ export function analyse(gpx: GpxFile): Analysis {
     hr: hrSeries ? hrSeries[k] : null,
     power: powerSeries ? powerSeries[k] : null,
     cad: cadSeries ? cadSeries[k] : null,
+    resp: respSeries ? respSeries[k] : null,
     speed: speedAt(k),
     t: timeSeries ? timeSeries[k] - timeSeries[0] : null,
   }))
@@ -300,6 +304,8 @@ export function analyse(gpx: GpxFile): Analysis {
     minGrade: hasElevation ? Math.min(...grade) : 0,
     avgHr: avg(pts.map((p) => p.hr)),
     maxHr: max(pts.map((p) => p.hr)),
+    avgResp: avg(pts.map((p) => p.resp)),
+    maxResp: max(pts.map((p) => p.resp)),
     avgCad: avg(pts.map((p) => p.cad).filter((c) => c === null || c > 0)),
     avgTemp: avg(pts.map((p) => p.temp)),
     avgPower: avg(pts.map((p) => p.power)),

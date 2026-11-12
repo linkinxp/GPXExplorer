@@ -51,6 +51,7 @@ function parsePoint(el: Element): TrackPoint | null {
     cad: extension(el, ['cad', 'cadence']),
     temp: extension(el, ['atemp', 'temp', 'wtemp']),
     power: extension(el, ['power']),
+    resp: extension(el, ['respiration', 'respirationrate', 'resp', 'br']),
   }
 }
 

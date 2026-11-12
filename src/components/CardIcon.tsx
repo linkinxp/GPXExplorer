@@ -14,6 +14,7 @@ const ICONS: [RegExp, string, string][] = [
   [/time/, 'M12 7v5l3 2M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 2h6', '#38bdf8'],
   [/speed|pace/, 'M4 16a8 8 0 1 1 16 0M12 16l4-5', '#38bdf8'],
   [/heart|hr|bpm|zone/, 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z', '#fb7185'],
+  [/breath|resp/, 'M3 12h3l2-6 3 12 3-9 2 3h5', '#2dd4bf'],
   [/power|watt/, 'M13 2L4 14h7l-1 8 9-12h-7z', '#a78bfa'],
   [/cadence|cad|rpm/, 'M21 12a9 9 0 1 1-3-6.7M21 4v5h-5', '#fbbf24'],
   [/temp/, 'M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z', '#fb923c'],

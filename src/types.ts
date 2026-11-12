@@ -7,6 +7,7 @@ export interface TrackPoint {
   cad: number | null
   temp: number | null
   power: number | null
+  resp: number | null
 }
 
 export interface Track {
@@ -42,6 +43,7 @@ export interface ProfilePoint {
   hr: number | null
   power: number | null
   cad: number | null
+  resp: number | null
   speed: number | null
   t: number | null
 }
@@ -99,6 +101,8 @@ export interface Analysis {
   minGrade: number
   avgHr: number | null
   maxHr: number | null
+  avgResp: number | null
+  maxResp: number | null
   avgCad: number | null
   avgTemp: number | null
   avgPower: number | null

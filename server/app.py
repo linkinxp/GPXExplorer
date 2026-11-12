@@ -328,11 +328,11 @@ def fit_to_gpx(data, name=None):
             lat, lon = v.get('position_lat'), v.get('position_long')
             if lat is None or lon is None:
                 continue
-            pts.append((lat * semi, lon * semi, v.get('enhanced_altitude', v.get('altitude')), v.get('timestamp'), v.get('heart_rate'), v.get('cadence'), v.get('power')))
+            pts.append((lat * semi, lon * semi, v.get('enhanced_altitude', v.get('altitude')), v.get('timestamp'), v.get('heart_rate'), v.get('cadence'), v.get('power'), v.get('enhanced_respiration_rate', v.get('respiration_rate'))))
     parts = []
-    for lat, lon, ele, t, hr, cad, pwr in pts:
+    for lat, lon, ele, t, hr, cad, pwr, resp in pts:
         ext = ''
-        if hr is not None or cad is not None or pwr is not None:
+        if hr is not None or cad is not None or pwr is not None or resp is not None:
             ext = (
                 '<extensions>'
                 + ('<gpxtpx:TrackPointExtension>'
@@ -340,6 +340,7 @@ def fit_to_gpx(data, name=None):
                    + (f'<gpxtpx:cad>{int(cad)}</gpxtpx:cad>' if cad is not None else '')
                    + '</gpxtpx:TrackPointExtension>' if hr is not None or cad is not None else '')
                 + (f'<power>{int(pwr)}</power>' if pwr is not None else '')
+                + (f'<respiration>{float(resp):.1f}</respiration>' if resp else '')
                 + '</extensions>'
             )
         parts.append(

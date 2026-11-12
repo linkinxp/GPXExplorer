@@ -101,6 +101,12 @@ export function StatGrid({ a }: { a: Analysis }) {
       sub: a.maxPower !== null ? `Max ${Math.round(a.maxPower)} W` : undefined,
       spark: { values: profile.map((p) => p.power), color: '#a78bfa' },
     },
+    a.avgResp !== null && {
+      label: 'Avg breathing',
+      value: numeric(a.avgResp, 1, 'br/min'),
+      sub: a.maxResp !== null ? `Max ${a.maxResp.toFixed(1)} br/min` : undefined,
+      spark: { values: profile.map((p) => p.resp), color: '#2dd4bf' },
+    },
     a.avgCad !== null && {
       label: 'Avg cadence',
       value: numeric(Math.round(a.avgCad), 0, 'rpm'),

@@ -592,7 +592,7 @@ function Dashboard({
           <div id="profile" className="mt-6 scroll-mt-24">
             <ElevationProfile a={a} hoverD={hoverD} onHover={onHover} focusRange={focusRange} />
           </div>
-          {(a.avgHr !== null || a.avgMovingSpeed !== null) && (
+          {(a.avgHr !== null || a.avgMovingSpeed !== null || a.avgResp !== null) && (
             <div className="mt-6">
               <EffortChart a={a} hoverD={hoverD} onHover={onHover} />
             </div>

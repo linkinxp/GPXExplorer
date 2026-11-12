@@ -17,6 +17,7 @@ export function PointsPanel({ gpx, points, slug }: PointsPanelProps) {
   const hasCad = points.some((p) => p.cad !== null)
   const hasTemp = points.some((p) => p.temp !== null)
   const hasPower = points.some((p) => p.power !== null)
+  const hasResp = points.some((p) => p.resp !== null)
 
   return (
     <div className="space-y-6">
@@ -76,7 +77,7 @@ export function PointsPanel({ gpx, points, slug }: PointsPanelProps) {
           <table className="tabular w-full text-left text-xs">
             <thead className="sticky top-0 bg-zinc-900 text-zinc-500">
               <tr>
-                {['#', 'Lat', 'Lon', 'Ele (m)', 'Time', ...(hasHr ? ['HR'] : []), ...(hasCad ? ['Cad'] : []), ...(hasTemp ? ['Temp °C'] : []), ...(hasPower ? ['Power (W)'] : [])].map((h) => (
+                {['#', 'Lat', 'Lon', 'Ele (m)', 'Time', ...(hasHr ? ['HR'] : []), ...(hasCad ? ['Cad'] : []), ...(hasTemp ? ['Temp °C'] : []), ...(hasPower ? ['Power (W)'] : []), ...(hasResp ? ['Br/min'] : [])].map((h) => (
                   <th key={h} className="px-3 py-2 font-medium">
                     {h}
                   </th>
@@ -95,6 +96,7 @@ export function PointsPanel({ gpx, points, slug }: PointsPanelProps) {
                   {hasCad && <td className="px-3 py-1.5">{p.cad ?? '—'}</td>}
                   {hasTemp && <td className="px-3 py-1.5">{p.temp ?? '—'}</td>}
                   {hasPower && <td className="px-3 py-1.5">{p.power ?? '—'}</td>}
+                  {hasResp && <td className="px-3 py-1.5">{p.resp ?? '—'}</td>}
                 </tr>
               ))}
             </tbody>

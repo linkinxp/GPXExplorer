@@ -11,7 +11,7 @@ const PAD_R = 8
 const PAD_T = 10
 const PAD_B = 6
 
-type Field = 'hr' | 'speed' | 'power' | 'cad'
+type Field = 'hr' | 'speed' | 'power' | 'cad' | 'resp'
 
 interface EffortChartProps {
   a: Analysis
@@ -33,6 +33,9 @@ export function EffortChart({ a, hoverD, onHover }: EffortChartProps) {
       )}
       {a.avgCad !== null && (
         <Trace title="Cadence" unit="rpm" color="#fbbf24" field="cad" a={a} hoverD={hoverD} onHover={onHover} />
+      )}
+      {a.avgResp !== null && (
+        <Trace title="Breathing rate" unit="br/min" color="#2dd4bf" field="resp" a={a} hoverD={hoverD} onHover={onHover} />
       )}
       <SpeedHistogram a={a} />
       <BestSpeeds a={a} />
@@ -77,7 +80,7 @@ function Trace({
     const vals = pts.map((p) => p.v)
     const vMin = Math.min(...vals)
     const vMax = Math.max(...vals)
-    const lo = field === 'hr' ? Math.max(0, Math.floor((vMin - 10) / 10) * 10) : 0
+    const lo = field === 'hr' ? Math.max(0, Math.floor((vMin - 10) / 10) * 10) : field === 'resp' ? Math.max(0, Math.floor((vMin - 4) / 5) * 5) : 0
     const hi = Math.max(Math.ceil((vMax + 5) / 10) * 10, lo + 10)
     const X = (d: number) => PAD_L + (d / total) * (W - PAD_L - PAD_R)
     const Y = (v: number) => H - PAD_B - ((v - lo) / (hi - lo)) * (H - PAD_T - PAD_B)

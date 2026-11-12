@@ -57,6 +57,15 @@ interface RawPoint {
   cad: number | null
   temp: number | null
   power: number | null
+  resp: number | null
+}
+
+// Breaths per minute: field 108 (enhanced, scale 100) when present, else field 99 (whole brpm).
+function respiration(values: Map<number, number | null>): number | null {
+  const enhanced = values.get(108)
+  if (enhanced !== undefined && enhanced !== null && enhanced > 0) return enhanced / 100
+  const plain = values.get(99)
+  return plain !== undefined && plain !== null && plain > 0 ? plain : null
 }
 
 export function fitToGpx(buf: ArrayBuffer, name: string): string {
@@ -136,6 +145,7 @@ export function fitToGpx(buf: ArrayBuffer, name: string): string {
       cad: values.get(4) ?? null,
       temp: values.get(13) ?? null,
       power: values.get(7) ?? null,
+      resp: respiration(values),
     })
   }
 
@@ -147,6 +157,7 @@ export function fitToGpx(buf: ArrayBuffer, name: string): string {
       if (p.cad !== null) ext.push(`<cad>${p.cad}</cad>`)
       if (p.temp !== null) ext.push(`<atemp>${p.temp}</atemp>`)
       if (p.power !== null) ext.push(`<power>${p.power}</power>`)
+      if (p.resp !== null) ext.push(`<respiration>${p.resp.toFixed(1)}</respiration>`)
       return [
         `<trkpt lat="${(p.lat as number).toFixed(7)}" lon="${(p.lon as number).toFixed(7)}">`,
         p.ele !== null ? `<ele>${p.ele.toFixed(1)}</ele>` : '',
